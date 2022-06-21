@@ -1,0 +1,7 @@
+{
+  "{apps,libs}/**/*.{ts,tsx}": [
+    "pretty-quick --staged",
+    "eslint --fix",
+    "jest --passWithNoTests --bail --findRelatedTests"
+  ]
+}
