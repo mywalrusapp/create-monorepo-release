@@ -164,7 +164,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     }
 
     const isDryRun = options.dryRun;
-    const { projects, common } = await loadConfig();
+    const { mainBranch, projects, common } = await loadConfig();
     const { all: tags } = await git.tags();
     const packageReleases = new Map<string, string>();
 
@@ -239,7 +239,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     if (isDryRun) {
       console.debug('would have pushed all tags');
     } else if (options.push) {
-      await git.push('origin');
+      await git.push('origin', mainBranch);
       await git.pushTags();
       console.log('pushed main branch changes and all tags');
     }
