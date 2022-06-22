@@ -16,7 +16,8 @@
     "lint": "eslint \"src/**/*.ts\" --fix",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:cov": "jest --coverage"
+    "test:cov": "jest --coverage",
+    "prepublish": "yarn build"
   },
   "dependencies": {
     "@commitlint/parse": "^17.0.0",
