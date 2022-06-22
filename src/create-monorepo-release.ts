@@ -159,7 +159,7 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
     const { all: tags } = await sgit().tags();
     const packageReleases = new Map<string, string>();
 
-    await sgit().stash(['-m', 'RELEASE IT STASH']);
+    await sgit().stash(['push', '-m', 'RELEASE IT STASH']);
 
     for (const name of projects) {
       const packagePath = path.join(process.cwd(), '/', name);
