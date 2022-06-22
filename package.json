@@ -7,6 +7,9 @@
   "bin": {
     "create-monorepo-release": "./bin/create-monorepo-release.js"
   },
+  "files": [
+    "bin"
+  ],
   "scripts": {
     "build": "tsc",
     "format": "prettier --write \"apps/**/*.ts\" \"libs/**/*.ts\"",
