@@ -13,6 +13,8 @@ import { Config } from './types';
 const IGNORE_FILES_REGEX = /node_modules/g;
 const CONFIG_FILENAME = '.create-monorepo-release.json';
 
+let git = sgit();
+
 enum ReleaseType {
   None = 0,
   Patch,
@@ -96,8 +98,8 @@ const loadConfig = async () => {
 };
 
 const cleanup = async () => {
-  if ((await sgit().stashList()).latest?.message === 'RELEASE IT STASH') {
-    await sgit().stash(['pop']);
+  if ((await git.stashList()).latest?.message === 'RELEASE IT STASH') {
+    await git.stash(['pop']);
   }
 };
 
@@ -129,9 +131,9 @@ async function init() {
     .filter(Boolean);
   console.log(`found ${projects.length} projects(s)`);
 
-  const isRepo = await sgit().checkIsRepo();
+  const isRepo = await git.checkIsRepo();
 
-  const { current: currentBranch } = await sgit().status();
+  const { current: currentBranch } = await git.status();
 
   if (!isRepo) {
     throw new Error('Not in a git repository');
@@ -152,14 +154,21 @@ async function init() {
   console.log('config file generated');
 }
 
-async function release(options: { dryRun?: boolean; push?: boolean }) {
+async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?: string; gitEmail?: string }) {
   try {
+    if (options.gitUsername) {
+      git.addConfig('user.name', options.gitUsername);
+    }
+    if (options.gitEmail) {
+      git.addConfig('user.email', options.gitEmail);
+    }
+
     const isDryRun = options.dryRun;
     const { projects, common } = await loadConfig();
-    const { all: tags } = await sgit().tags();
+    const { all: tags } = await git.tags();
     const packageReleases = new Map<string, string>();
 
-    await sgit().stash(['push', '-m', 'RELEASE IT STASH']);
+    await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
     for (const name of projects) {
       const packagePath = path.join(process.cwd(), '/', name);
@@ -168,9 +177,9 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
       const json = await fse.readJSON(packageFilename);
       const lastTagName = tags.includes(`${name}-${json.version}`) ? `${name}-${json.version}` : undefined;
 
-      const { hash: tagHash } = lastTagName ? (await sgit().log([lastTagName])).latest : { hash: undefined };
+      const { hash: tagHash } = lastTagName ? (await git.log([lastTagName])).latest : { hash: undefined };
 
-      const logsSince = (await sgit().log({ file: packagePath, from: tagHash, to: 'HEAD' })).all;
+      const logsSince = (await git.log({ file: packagePath, from: tagHash, to: 'HEAD' })).all;
 
       let releaseType: ReleaseType = ReleaseType.None;
       for (const { message } of logsSince) {
@@ -195,7 +204,7 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
         rawPackageJson = rawPackageJson.replace(/"version"\s*:\s*"[^"]+"/, `"version": "${nextVersion}"`);
         await fse.writeFile(packageFilename, rawPackageJson, 'utf-8');
         console.log(`bumped ${name}/package.json`);
-        await sgit().add(packageFilename);
+        await git.add(packageFilename);
       }
 
       if (isDryRun) {
@@ -203,7 +212,7 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
       } else {
         await writeChangelog(changelogFilename, { tagPrefix: name, path: packagePath, from: tagHash, to: 'HEAD' });
         console.log(`change log ${name}/CHANGELOG.md updated`);
-        await sgit().add(changelogFilename);
+        await git.add(changelogFilename);
       }
       packageReleases.set(name, nextVersion);
     }
@@ -211,7 +220,7 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
     if (isDryRun) {
       console.debug('would have committed release changes');
     } else {
-      await sgit().commit(`chore: created release`);
+      await git.commit(`chore: created release`);
     }
 
     for (const name of projects) {
@@ -222,7 +231,7 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
       if (isDryRun) {
         console.debug(`would have created tag ${name}-${nextVersion}`);
       } else {
-        await sgit().addTag(`${name}-${nextVersion}`);
+        await git.addTag(`${name}-${nextVersion}`);
         console.log(`tag ${name}-${nextVersion} created`);
       }
     }
@@ -230,14 +239,14 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
     if (isDryRun) {
       console.debug('would have pushed all tags');
     } else if (options.push) {
-      await sgit().pushTags();
+      await git.pushTags();
       console.log('pushed main branch changes and all tags');
     }
 
     await cleanup();
     console.log('release complete');
   } catch (err) {
-    await sgit().reset();
+    await git.reset();
     await cleanup();
     throw err;
   }
@@ -256,6 +265,8 @@ function main() {
     .description('creates a new release for all projects')
     .option('--dry-run', 'Does not perform write operations')
     .option('--push', 'Pushes all changes and tags to remote branch')
+    .option('--git.username', 'Username to use for tagging')
+    .option('--git.email', 'Email to use for tagging')
     .action(runAsync(release));
 
   program.parse();
