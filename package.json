@@ -1,6 +1,6 @@
 {
   "name": "create-monorepo-release",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "main": "src/create-monorepo-release.js",
   "author": "Alejandro Gonzalez Sole <alejandro@mywalrusapp.com>",
   "license": "UNLICENSED",
