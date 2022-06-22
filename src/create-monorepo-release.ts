@@ -95,6 +95,12 @@ const loadConfig = async () => {
   return json;
 };
 
+const cleanup = async () => {
+  if ((await sgit().stashList()).latest?.message === 'RELEASE IT STASH') {
+    await sgit().stash(['pop']);
+  }
+};
+
 async function init() {
   const configFile = path.join(process.cwd(), '/', CONFIG_FILENAME);
 
@@ -149,7 +155,7 @@ async function init() {
 async function release(options: { dryRun?: boolean; push?: boolean }) {
   try {
     const isDryRun = options.dryRun;
-    const { projects } = await loadConfig();
+    const { projects, common } = await loadConfig();
     const { all: tags } = await sgit().tags();
     const packageReleases = new Map<string, string>();
 
@@ -228,15 +234,11 @@ async function release(options: { dryRun?: boolean; push?: boolean }) {
       console.log('pushed main branch changes and all tags');
     }
 
-    if ((await sgit().stashList()).latest?.message === 'RELEASE IT STASH') {
-      await sgit().stash(['pop']);
-    }
+    await cleanup();
     console.log('release complete');
   } catch (err) {
     await sgit().reset();
-    if ((await sgit().stashList()).latest?.message === 'RELEASE IT STASH') {
-      await sgit().stash(['pop']);
-    }
+    await cleanup();
     throw err;
   }
 }

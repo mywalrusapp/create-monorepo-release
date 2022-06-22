@@ -5,7 +5,7 @@
   "author": "Alejandro Gonzalez Sole <alejandro@mywalrusapp.com>",
   "license": "UNLICENSED",
   "bin": {
-    "create-monorepo-release": "./bin/create-monorepo-release"
+    "create-monorepo-release": "./bin/create-monorepo-release.js"
   },
   "scripts": {
     "build": "tsc",
