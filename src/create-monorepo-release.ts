@@ -169,6 +169,9 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
 
     await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
+    console.log('Fetching latest changes and tags');
+    await git.fetch(['--tags']);
+
     for (const name of projects) {
       const projectPath = path.join(process.cwd(), '/', name);
       const packageFilename = path.join(projectPath, '/package.json');
@@ -186,6 +189,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
         const commitReleaseType = getReleaseType(commitConvention.type);
         if (commitReleaseType > releaseType) {
           releaseType = commitReleaseType;
+          console.debug(`found commit type "${commitReleaseType}"\n  ${message}`);
         }
       }
 
