@@ -219,7 +219,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     if (isDryRun) {
       console.debug('would have committed release changes');
     } else {
-      await git.commit(`release: created release`);
+      await git.commit(`ci: created release`);
     }
 
     for (const name of projects) {
