@@ -32,7 +32,6 @@ const getReleaseType = (commitType: string) => {
       return ReleaseType.Minor;
     case 'fix':
     case 'perf':
-    case 'chore':
       return ReleaseType.Patch;
     default:
       return ReleaseType.None;
