@@ -169,17 +169,19 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
 
     await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
-    console.log('Fetching latest changes and tags');
-    await git.fetch(['--tags']);
-
     for (const name of projects) {
+      const tags = await git.tags(['-n', `${name}-*`, '--sort=-version:refname', '--format', '%(refname:short)']);
       const projectPath = path.join(process.cwd(), '/', name);
       const packageFilename = path.join(projectPath, '/package.json');
       const changelogFilename = path.join(projectPath, '/CHANGELOG.md');
       const json = await fse.readJSON(packageFilename);
-      const lastTagName = tags.includes(`${name}-${json.version}`) ? `${name}-${json.version}` : undefined;
+      const lastTagName = tags.all.includes(`${name}-${json.version}`) ? `${name}-${json.version}` : undefined;
 
-      const { hash: tagHash } = lastTagName ? (await git.log([lastTagName])).latest : { hash: undefined };
+      if (!lastTagName) {
+        console.warn(`warning: latest tag ${name}-${json.version} does not exist`);
+      }
+
+      const { hash: tagHash } = lastTagName ? (await git.log([lastTagName])).latest : { hash: 'HEAD' };
 
       const logsSince = (await git.log({ file: projectPath, from: tagHash, to: 'HEAD' })).all;
 
