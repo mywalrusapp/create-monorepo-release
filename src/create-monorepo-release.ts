@@ -169,6 +169,9 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
 
     await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
+    console.log('Fetching latest changes and tags')
+    await git.fetch(['--tags']);
+
     for (const name of projects) {
       const tags = await git.tags(['-n', `${name}-*`, '--sort=-version:refname', '--format', '%(refname:short)']);
       const projectPath = path.join(process.cwd(), '/', name);
