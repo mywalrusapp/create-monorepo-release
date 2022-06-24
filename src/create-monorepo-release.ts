@@ -216,9 +216,11 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
       packageReleases.set(name, nextVersion);
     }
 
+    const summary = await git.diffSummary(['--staged']);
+
     if (isDryRun) {
       console.debug('would have committed release changes');
-    } else {
+    } else if (summary.changed > 0 || summary.deletions > 0 || summary.insertions > 0) {
       await git.commit(`ci: created release`);
     }
 
