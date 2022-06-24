@@ -171,15 +171,15 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
     for (const name of projects) {
-      const packagePath = path.join(process.cwd(), '/', name);
-      const packageFilename = path.join(packagePath, '/package.json');
-      const changelogFilename = path.join(packagePath, '/CHANGELOG.md');
+      const projectPath = path.join(process.cwd(), '/', name);
+      const packageFilename = path.join(projectPath, '/package.json');
+      const changelogFilename = path.join(projectPath, '/CHANGELOG.md');
       const json = await fse.readJSON(packageFilename);
       const lastTagName = tags.includes(`${name}-${json.version}`) ? `${name}-${json.version}` : undefined;
 
       const { hash: tagHash } = lastTagName ? (await git.log([lastTagName])).latest : { hash: undefined };
 
-      const logsSince = (await git.log({ file: packagePath, from: tagHash, to: 'HEAD' })).all;
+      const logsSince = (await git.log({ file: projectPath, from: tagHash, to: 'HEAD' })).all;
 
       let releaseType: ReleaseType = ReleaseType.None;
       for (const { message } of logsSince) {
@@ -210,7 +210,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
       if (isDryRun) {
         console.debug(`would have written ${name}/CHANGELOG.md`);
       } else {
-        await writeChangelog(changelogFilename, { tagPrefix: name, path: packagePath, from: tagHash, to: 'HEAD' });
+        await writeChangelog(changelogFilename, { tagPrefix: name, path: projectPath, from: tagHash, to: 'HEAD' });
         console.log(`change log ${name}/CHANGELOG.md updated`);
         await git.add(changelogFilename);
       }
@@ -220,7 +220,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     if (isDryRun) {
       console.debug('would have committed release changes');
     } else {
-      await git.commit(`chore: created release`);
+      await git.commit(`release: created release`);
     }
 
     for (const name of projects) {
