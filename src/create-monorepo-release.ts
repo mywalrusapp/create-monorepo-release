@@ -13,6 +13,12 @@ import { Config } from './types';
 const IGNORE_FILES_REGEX = /node_modules/g;
 const CONFIG_FILENAME = '.create-monorepo-release.json';
 
+const defaultPrefixRules = {
+  major: ['BREAKING CHANGE'],
+  minor: ['feat'],
+  patch: ['fix', 'perf', 'chore'],
+};
+
 let git = sgit();
 
 enum ReleaseType {
@@ -22,20 +28,24 @@ enum ReleaseType {
   Major,
 }
 
+const ReleaseTypeMap = {
+  [ReleaseType.Major]: 'major',
+  [ReleaseType.Minor]: 'minor',
+  [ReleaseType.Patch]: 'patch',
+  [ReleaseType.None]: 'none',
+};
+
 class CliError extends Error {}
 
-const getReleaseType = (commitType: string) => {
-  switch (commitType) {
-    case 'BREAKING CHANGE':
-      return ReleaseType.Major;
-    case 'feat':
-      return ReleaseType.Minor;
-    case 'fix':
-    case 'perf':
-      return ReleaseType.Patch;
-    default:
-      return ReleaseType.None;
+const getReleaseType = (commitType: string, rules: typeof defaultPrefixRules) => {
+  if (rules.major.includes(commitType)) {
+    return ReleaseType.Major;
+  } else if (rules.minor.includes(commitType)) {
+    return ReleaseType.Minor;
+  } else if (rules.patch.includes(commitType)) {
+    return ReleaseType.Patch;
   }
+  return ReleaseType.None;
 };
 
 const getNextVersion = (currentVersion: string, releaseType: ReleaseType) => {
@@ -141,7 +151,6 @@ async function init() {
   await fse.writeJSON(
     path.join(process.cwd(), '/', CONFIG_FILENAME),
     {
-      debug: true,
       includeChangelog: true,
       mainBranch: currentBranch,
       projects,
@@ -163,13 +172,13 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     }
 
     const isDryRun = options.dryRun;
-    const { mainBranch, projects, common } = await loadConfig();
+    const { mainBranch = 'main', projects = [], common = [], prefixRules = defaultPrefixRules } = await loadConfig();
     const { all: tags } = await git.tags();
     const packageReleases = new Map<string, string>();
 
     await git.stash(['push', '-m', 'RELEASE IT STASH']);
 
-    console.log('Fetching latest changes and tags')
+    console.log('Fetching latest changes and tags');
     await git.fetch(['--tags']);
 
     for (const name of projects) {
@@ -188,13 +197,19 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
 
       const logsSince = (await git.log({ file: projectPath, from: tagHash, to: 'HEAD' })).all;
 
+      if (!logsSince.length) {
+        console.log('no release required. no commits since last version');
+        continue;
+      }
+
       let releaseType: ReleaseType = ReleaseType.None;
+      console.log(`evaluating ${logsSince.length} commit(s)`);
       for (const { message } of logsSince) {
         const commitConvention = await parser(message);
-        const commitReleaseType = getReleaseType(commitConvention.type);
+        const commitReleaseType = getReleaseType(commitConvention.type, prefixRules);
         if (commitReleaseType > releaseType) {
           releaseType = commitReleaseType;
-          console.debug(`found commit type "${commitReleaseType}"\n  ${message}`);
+          console.log(`found commit trigger "${ReleaseTypeMap[commitReleaseType]}"\n  ${message}`);
         }
       }
 
