@@ -154,6 +154,7 @@ async function init() {
       includeChangelog: true,
       mainBranch: currentBranch,
       projects,
+      commitMessage: 'ci: created release',
       common: [],
     },
     { spaces: 2 },
@@ -162,7 +163,7 @@ async function init() {
   console.log('config file generated');
 }
 
-async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?: string; gitEmail?: string }) {
+async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?: string; gitEmail?: string; commitMessage?: string }) {
   try {
     if (options.gitUsername) {
       git.addConfig('user.name', options.gitUsername);
@@ -245,7 +246,7 @@ async function release(options: { dryRun?: boolean; push?: boolean; gitUsername?
     if (isDryRun) {
       console.debug('would have committed release changes');
     } else if (summary.changed > 0 || summary.deletions > 0 || summary.insertions > 0) {
-      await git.commit(`ci: created release`);
+      await git.commit(options.commitMessage);
     }
 
     for (const name of projects) {
